@@ -1,0 +1,151 @@
+# Jenkins Helm values with JCasC (Jenkins Configuration as Code)
+controller:
+  # Admin credentials
+  admin:
+    username: "admin"
+    password: "admin123"
+  
+  # Resources
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+  
+  # Install required plugins (using latest compatible versions)
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - configuration-as-code
+    - job-dsl
+    - pipeline-model-definition
+    - pipeline-stage-view
+    - credentials-binding
+    - workflow-job
+    - cloudbees-folder
+  
+  # Jenkins Configuration as Code
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      welcome-message: |
+        jenkins:
+          systemMessage: "Jenkins configured automatically via JCasC\n\nTime Recorder job will run every 5 minutes to record timestamps to PostgreSQL."
+      
+      jobs: |
+        jobs:
+          - script: >
+              pipelineJob('time-recorder') {
+                  description('Records current date and time to PostgreSQL database every 5 minutes')
+                  
+                  triggers {
+                      cron('*/5 * * * *')
+                  }
+                  
+                  definition {
+                      cps {
+                          script('''
+                              pipeline {
+                                  agent {
+                                      kubernetes {
+                                          yaml """
+                                            apiVersion: v1
+                                            kind: Pod
+                                            spec:
+                                              containers:
+                                              - name: postgres-client
+                                                image: postgres:14-alpine
+                                                command: ['cat']
+                                                tty: true
+                                                env:
+                                                - name: PGPASSWORD
+                                                  value: admin123
+                                                - name: NODE_NAME
+                                                  valueFrom:
+                                                    fieldRef:
+                                                      fieldPath: spec.nodeName
+                                          """
+                                      }
+                                  }
+                                  
+                                  stages {
+                                      stage('Create Table') {
+                                          steps {
+                                              container('postgres-client') {
+                                                  sh """
+                                                      echo "Creating time_records table if not exists..."
+                                                      psql -h postgresql.postgres.svc.cluster.local -U admin -d postgres -c "CREATE TABLE IF NOT EXISTS time_records (id SERIAL PRIMARY KEY, recorded_at TIMESTAMP NOT NULL, pod_name VARCHAR(255), node_name VARCHAR(255));"
+                                                  """
+                                              }
+                                          }
+                                      }
+                                      
+                                      stage('Record Time') {
+                                          steps {
+                                              container('postgres-client') {
+                                                  script {
+                                                      def podName = sh(script: 'echo $HOSTNAME', returnStdout: true).trim()
+                                                      def nodeName = sh(script: 'echo ${NODE_NAME:-unknown}', returnStdout: true).trim()
+                                                      
+                                                      sh """
+                                                          echo "Recording current time to database..."
+                                                          psql -h postgresql.postgres.svc.cluster.local -U admin -d postgres -c "INSERT INTO time_records (recorded_at, pod_name, node_name) VALUES (NOW(), '${podName}', '${nodeName}');"
+                                                          
+                                                          echo "Verifying last 5 records..."
+                                                          psql -h postgresql.postgres.svc.cluster.local -U admin -d postgres -c "SELECT * FROM time_records ORDER BY recorded_at DESC LIMIT 5;"
+                                                      """
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  }
+                                  
+                                  post {
+                                      success {
+                                          echo 'Time recorded successfully!'
+                                      }
+                                      failure {
+                                          echo 'Failed to record time!'
+                                      }
+                                  }
+                              }
+                          '''.stripIndent())
+                          sandbox()
+                      }
+                  }
+              }
+  
+  # Service configuration
+  serviceType: ClusterIP
+  servicePort: 8080
+  
+  # Enable agent listener
+  agentListenerEnabled: true
+  agentListenerPort: 50000
+  
+  # Persistence
+  persistence:
+    enabled: true
+    size: 8Gi
+    storageClass: "local-path"
+
+# Disable static agent - we use dynamic pods
+agent:
+  enabled: false
+
+# RBAC
+rbac:
+  create: true
+  readSecrets: true
+
+# Service Account
+serviceAccount:
+  create: true
+  name: jenkins
+
+# Enable metrics
+prometheus:
+  enabled: true

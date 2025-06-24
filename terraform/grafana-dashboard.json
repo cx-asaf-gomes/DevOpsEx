@@ -1,0 +1,211 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Jenkins Time Records",
+    "tags": ["jenkins", "postgresql", "devops"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Time Records Count",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "",
+            "format": "table",
+            "rawSql": "SELECT COUNT(*) as count FROM time_records",
+            "refId": "A",
+            "datasource": {
+              "type": "postgres",
+              "uid": "${datasource}"
+            }
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "pluginVersion": "8.0.0"
+      },
+      {
+        "id": 2,
+        "title": "Records Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "",
+            "format": "time_series",
+            "rawSql": "SELECT recorded_at as time, COUNT(*) as records FROM time_records WHERE recorded_at >= NOW() - INTERVAL '24 hours' GROUP BY DATE_TRUNC('hour', recorded_at) ORDER BY time",
+            "refId": "A",
+            "datasource": {
+              "type": "postgres",
+              "uid": "${datasource}"
+            }
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "options": {
+          "tooltip": {
+            "mode": "single"
+          },
+          "legend": {
+            "displayMode": "table",
+            "values": ["value"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        }
+      },
+      {
+        "id": 3,
+        "title": "Recent Records",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "",
+            "format": "table",
+            "rawSql": "SELECT id, recorded_at, pod_name, node_name FROM time_records ORDER BY recorded_at DESC LIMIT 20",
+            "refId": "A",
+            "datasource": {
+              "type": "postgres",
+              "uid": "${datasource}"
+            }
+          }
+        ],
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "recorded_at"
+            }
+          ]
+        },
+        "pluginVersion": "8.0.0",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "recorded_at"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 200
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": [],
+    "uid": "time-records"
+  },
+  "folderId": 0,
+  "overwrite": true
+}

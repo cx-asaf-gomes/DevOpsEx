@@ -1,0 +1,28 @@
+# Grafana configuration
+adminPassword: admin123
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClassName: local-path
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+# Enable metrics
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+
+# Grafana configuration
+grafana.ini:
+  server:
+    root_url: http://grafana.localhost
+  security:
+    allow_embedding: true

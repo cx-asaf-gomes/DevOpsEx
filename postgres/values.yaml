@@ -1,0 +1,32 @@
+# PostgreSQL Helm values
+global:
+  postgresql:
+    auth:
+      username: admin
+      existingSecret: postgresql-secret
+      database: postgres
+
+primary:
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "local-path"
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Enable pg_stat_statements for query monitoring
+  initdb:
+    scripts:
+      enable-extensions.sql: |
+        CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false

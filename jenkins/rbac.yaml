@@ -1,0 +1,64 @@
+# ClusterRole for Jenkins to manage worker pods
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins-master
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "create", "update"]
+
+---
+# ClusterRoleBinding for Jenkins
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-master
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins-master
+subjects:
+- kind: ServiceAccount
+  name: jenkins
+  namespace: jenkins
+
+---
+# Role for Jenkins to read secrets in default namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-secret-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+
+---
+# RoleBinding for Jenkins to access default namespace secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-secret-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: jenkins
+  namespace: jenkins
+roleRef:
+  kind: Role
+  name: jenkins-secret-reader
+  apiGroup: rbac.authorization.k8s.io

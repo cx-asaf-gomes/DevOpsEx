@@ -1,0 +1,6 @@
+# Forward PostgreSQL port to your local machine
+kubectl port-forward -n postgres svc/postgresql 5432:5432
+
+# Keep this running, then in another terminal:
+psql -h localhost -p 5432 -U admin -d postgres
+# Password: admin123
